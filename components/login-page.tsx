@@ -30,17 +30,29 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
     try {
       // Fetch user data
+      console.log("Current window location:", window.location.href);
       console.log("Fetching user data from /user.json");
+      
+      // Force local URL to prevent external redirects
+      const localUrl = `${window.location.protocol}//${window.location.host}/user.json`;
+      console.log("Using local URL:", localUrl);
+      
       let response;
       try {
-        response = await fetch("/user.json");
+        response = await fetch(localUrl);
       } catch (fetchError) {
-        console.log("Relative URL failed, trying absolute URL");
-        const baseUrl = window.location.origin;
-        response = await fetch(`${baseUrl}/user.json`);
+        console.log("Local URL failed, trying relative URL");
+        response = await fetch("/user.json");
       }
       console.log("User data response status:", response.status);
       console.log("Response URL:", response.url);
+      console.log("Expected URL:", localUrl);
+      
+      if (response.url !== localUrl && !response.url.includes(window.location.host)) {
+        console.error("WARNING: Response URL is different from expected!");
+        console.error("Expected:", localUrl);
+        console.error("Got:", response.url);
+      }
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
