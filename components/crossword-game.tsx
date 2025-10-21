@@ -261,7 +261,7 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
       }
       if (formed === answer) correctCount++
     }
-    const pts = correctCount * 10
+    const pts = correctCount * 50
     setScore(pts)
     return pts
   }
