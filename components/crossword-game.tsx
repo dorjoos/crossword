@@ -54,6 +54,7 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
   const [sendingAward, setSendingAward] = useState<boolean>(false);
   const [awardSuccess, setAwardSuccess] = useState<boolean>(false);
   const [awardAlreadySent, setAwardAlreadySent] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
   const cellRefs = useRef<(HTMLInputElement | null)[][]>([]);
 
   useEffect(() => {
@@ -171,6 +172,7 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
     const copy = userAnswers.map(row => [...row]);
     copy[r][c] = val;
     setUserAnswers(copy);
+    setError(''); // Clear error when user types
   };
 
   const moveCursor = (r: number, c: number, delta: number) => {
@@ -187,9 +189,17 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
 
   const checkAnswers = async () => {
     setShowErrors(true);
+    setError(''); // Clear any previous errors
     const finalScore = computeScore();
     console.log('Calculated score:', finalScore);
     console.log('Current score state:', score);
+    
+    // Don't send award if score is negative
+    if (finalScore < 0) {
+      console.log('Score is negative, not sending award');
+      setError('Сөрөг оноо байна. Хариултаа шалгана уу.');
+      return;
+    }
     
     // Send award if user is logged in
     if (user) {
@@ -397,26 +407,31 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
             </div>
           </div>
 
-            <div className="flex gap-2 justify-center mt-4">
-            <button 
-              onClick={checkAnswers} 
-              disabled={sendingAward}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded flex items-center gap-2"
-            >
-              {sendingAward ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Шалгаж байна...
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4" />
-                  Илгээх
-                </>
+            <div className="flex flex-col gap-2 justify-center mt-4">
+              {error && (
+                <div className="bg-red-900/20 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm text-center">
+                  {error}
+                </div>
               )}
-            </button>
-            {/* reveal and reset buttons removed per request */}
-          </div>
+              <button 
+                onClick={checkAnswers} 
+                disabled={sendingAward}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded flex items-center gap-2"
+              >
+                {sendingAward ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Шалгаж байна...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Илгээх
+                  </>
+                )}
+              </button>
+              {/* reveal and reset buttons removed per request */}
+            </div>
   </div>
   </div>
   <aside className="space-y-6">
