@@ -31,6 +31,17 @@ export default function Home() {
       }
     }
     setLoading(false);
+
+    // Listen for localStorage changes (for auto logout)
+    const handleStorageChange = () => {
+      const currentUser = localStorage.getItem('crosswordUser');
+      if (!currentUser) {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleLoginSuccess = (loggedInUser: User) => {

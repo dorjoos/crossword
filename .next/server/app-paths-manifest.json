@@ -1,3 +1,5 @@
 {
+  "/api/update-user/route": "app/api/update-user/route.js",
+  "/api/send-award/route": "app/api/send-award/route.js",
   "/page": "app/page.js"
 }

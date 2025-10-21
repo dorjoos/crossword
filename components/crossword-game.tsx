@@ -211,7 +211,11 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
         if (result.success) {
           console.log('Award sent successfully');
           setAwardSuccess(true);
-          // Show success message without auto logout
+          // Auto logout after successful award submission
+          setTimeout(() => {
+            localStorage.removeItem('crosswordUser');
+            window.location.reload();
+          }, 3000); // Wait 3 seconds to show success message
         } else if (result.alreadySent) {
           console.log('Award already sent previously');
         } else {
@@ -398,7 +402,7 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  Шалгах
+                  Илгээх
                 </>
               )}
             </button>
@@ -474,7 +478,7 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
                 Таны оноо ({score} оноо) амжилттай илгээгдлээ.
               </p>
               <p className="text-sm text-green-300 mb-4">
-                Тоглолтыг үргэлжлүүлж болно.
+                Системээс автоматаар гарах болно...
               </p>
               <button
                 onClick={() => setAwardSuccess(false)}
