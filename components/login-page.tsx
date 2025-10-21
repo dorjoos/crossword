@@ -31,9 +31,31 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     try {
       // Fetch user data
       console.log("Fetching user data from /user.json");
-      const response = await fetch("/user.json");
+      let response;
+      try {
+        response = await fetch("/user.json");
+      } catch (fetchError) {
+        console.log("Relative URL failed, trying absolute URL");
+        const baseUrl = window.location.origin;
+        response = await fetch(`${baseUrl}/user.json`);
+      }
       console.log("User data response status:", response.status);
-      const data = await response.json();
+      console.log("Response URL:", response.url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const responseText = await response.text();
+      console.log("Response text:", responseText.substring(0, 200));
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}...`);
+      }
       console.log("User data:", data);
       
       // Find user by token (password)
