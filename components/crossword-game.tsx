@@ -7,25 +7,39 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Check, RotateCcw, Lightbulb } from "lucide-react";
 
-export default function CrosswordGame() {
+interface User {
+  name: string;
+  token: string;
+  user_id: number;
+  logged_status: boolean;
+  last_final_score: number;
+  award_sent: boolean;
+  award_response_status: number;
+}
+
+interface CrosswordGameProps {
+  user?: User;
+}
+
+export default function CrosswordGame({ user }: CrosswordGameProps) {
   const GRID_SIZE = 25;
   type Cell = { letter: string; isBlack: boolean; row: number; col: number; number?: number };
   const clues = [
-    { number: 1, text: "Босоо үг 1", answer: "ДАВХАРБАТАЛГААЖУУЛАЛТ", direction: "down", startRow: 3, startCol: 5 },
-    { number: 2, text: "Хэвтээ үг 2", answer: "ЭРСДЭЛИЙНСОЁЛ", direction: "across", startRow: 2, startCol: 11 },
-    { number: 3, text: "Хэвтээ үг 3", answer: "АВЛИГА", direction: "across", startRow: 5, startCol: 4 },
-    { number: 4, text: "Босоо үг 4", answer: "НЭГДМЭЛБАЙДАЛ", direction: "down", startRow: 5, startCol: 15 },
-    { number: 5, text: "Хэвтээ үг 5", answer: "АЯЛЛЫНДААТГАЛ", direction: "across", startRow: 7, startCol: 5 },
-    { number: 6, text: "Босоо үг 6", answer: "ЭРСДЭЛИЙНАППЕТИТ", direction: "down", startRow: 7, startCol: 1 },
-    { number: 7, text: "Босоо үг 7", answer: "КАРТ", direction: "down", startRow: 6, startCol: 13 },
-    { number: 8, text: "Хэвтээ үг 8", answer: "ИНДИКАТОР", direction: "across", startRow: 15, startCol: 0 },
-    { number: 9, text: "Босоо үг 9", answer: "ТЕРРОРИЗМ", direction: "down", startRow: 12, startCol: 12 },
-    { number: 10, text: "Хэвтээ үг 10", answer: "ТЕЛЕГРАМ", direction: "across", startRow: 13, startCol: 9 },
-    { number: 11, text: "Босоо үг 11", answer: "ШИЛЖҮҮЛЭХ", direction: "down", startRow: 1, startCol: 17 },
-    { number: 12, text: "Хэвтээ үг 12", answer: "ГУРАВ", direction: "across", startRow: 19, startCol: 4 },
-    { number: 13, text: "Хэвтээ үг 13", answer: "ФАТФ", direction: "across", startRow: 16, startCol: 14 },
-    { number: 14, text: "Босоо үг 14", answer: "ШҮГЭЛҮЛЭЭХ", direction: "down", startRow: 3, startCol: 8 },
-    { number: 15, text: "Хэвтээ үг 15", answer: "ЧАРЖБЭК", direction: "across", startRow: 21, startCol: 4 },
+    { number: 1, text: "Голомт банкны онлайн үйлчилгээнүүд дээр харилцагчийг эрсдэлээс хамгаалахын тулд хэрэгжүүлж буй хамгийн найдвартай арга буюу технологийн шийдэл юу вэ?", answer: "ДАВХАРБАТАЛГААЖУУЛАЛТ", direction: "down", startRow: 3, startCol: 5 },
+    { number: 2, text: "Эрсдэлтэй холбоотой хэм хэмжээ, хандлага, зан төлөвийг нийтэд нь юу гэх вэ?", answer: "ЭРСДЭЛИЙНСОЁЛ", direction: "across", startRow: 2, startCol: 11 },
+    { number: 3, text: "Албан тушаалын эрх мэдлээ хувийн ашиг хонжоо олоход урвуулан ашиглах, бусдад давуу байдал олгох, олж авах үйлдэл, эс үйлдэхүйгээр илрэх аливаа эрх зүйн зөрчил", answer: "АВЛИГА", direction: "across", startRow: 5, startCol: 4 },
+    { number: 4, text: "Үйл ажиллагааны эрсдэлийн удирдлагыг банкны бүх түвшин, үйл ажиллагаа, бүтээгдэхүүн, үйлчилгээ, процесс, системд хэрэгжүүлнэ. Энэ нь үйл ажиллагааны эрсдэлийн удирдлагад баримтлах ямар зарчим бэ?", answer: "НЭГДМЭЛБАЙДАЛ", direction: "down", startRow: 5, startCol: 15 },
+    { number: 5, text: "Картын дагалдах үйлчилгээний нэгийг нэрлэнэ үү.", answer: "АЯЛЛЫНДААТГАЛ", direction: "across", startRow: 7, startCol: 5 },
+    { number: 6, text: "Банкны эрсдэл даах чадварынхаа хүрээнд стратегийн зорилго, бизнес төлөвлөгөөндөө хүрэхийн тулд хүлээн зөвшөөрөх эрсдэлийн төрөл, хэм хэмжээ.", answer: "ЭРСДЭЛИЙНАППЕТИТ", direction: "down", startRow: 7, startCol: 1 },
+    { number: 7, text: "Өдөр тутам хэрэглэгддэг биет болон биет бус төлбөрийн хэрэгсэл юу вэ?", answer: "КАРТ", direction: "down", startRow: 6, startCol: 13 },
+    { number: 8, text: "Эрсдэлийн мэдээллийн системийн аль цэсэнд Үйл ажилллагааны эрсдэлийг илэрхийлэх, хянах зорилготой тоон болон чанарын үзүүлэлт буюу Эрсдэлийн Түлхүүр Үзүүлэлт бүртгэх, гүйцэтгэл тайлагнах байдаг вэ?", answer: "ИНДИКАТОР", direction: "across", startRow: 15, startCol: 0 },
+    { number: 9, text: "Улс төр, шашин, үзэл суртал, эдгээртэй адилтгах бусад зорилгодоо хүрэхийн тулд төрийн байгуулал, нийгэм, эсхүл түүний тодорхой хэсэгт нөлөөлөн айдаст автуулахаар хүчирхийлэл үйлдэх, хүчирхийлэл үйлдэхээр заналхийлэх, гамшгийн нөхцөлийг бүрдүүлэх үйл ажиллагааг............ гэнэ.", answer: "ТЕРРОРИЗМ", direction: "down", startRow: 12, startCol: 12 },
+    { number: 10, text: "Монгол улсад хамгийн ихээр залилангийн гэмт хэрэг хийгдэж буй сошиал платформ юу вэ?", answer: "ТЕЛЕГРАМ", direction: "across", startRow: 13, startCol: 9 },
+    { number: 11, text: "Эрсдэлтэй холбоотой даатгалд хамрагдах, гэрээгээр дамжуулан эрсдэлийг хуваалцах нь үйл ажиллагааны эрсдэлийн үнэлгээнд үндэслэн хэрэгжүүлэх аль хувилбар вэ?", answer: "ШИЛЖҮҮЛЭХ", direction: "down", startRow: 1, startCol: 17 },
+    { number: 12, text: "Мөнгө угаах процесс хэдэн үе шаттай вэ?", answer: "ГУРАВ", direction: "across", startRow: 19, startCol: 4 },
+    { number: 13, text: "Олон улсын санхүүгийн гэмт хэрэгтэй тэмцэх байгууллага", answer: "ФАТФ", direction: "across", startRow: 16, startCol: 14 },
+    { number: 14, text: "Та хээл хахууль, авлигатай холбоотой зөрчил болон бусад журам, ёс зүйн код зөрчсөн үйлдлийг мэдсэн тохиолдолд ............ үүрэгтэй.", answer: "ШҮГЭЛҮЛЭЭХ", direction: "down", startRow: 3, startCol: 8 },
+    { number: 15, text: "Карт эзэмшигч хүлээн зөвшөөрөхгүй гүйлгээг нэхэмжлэх үйл явцыг юу гэж нэрлэдэг вэ?", answer: "ЧАРЖБЭК", direction: "across", startRow: 21, startCol: 4 },
   ];
 
   const [grid, setGrid] = useState<Cell[][]>([]);
@@ -37,6 +51,8 @@ export default function CrosswordGame() {
   const [theme, setTheme] = useState<'dark'|'light'>('dark');
   const [showErrors, setShowErrors] = useState<boolean>(false);
   const [score, setScore] = useState<number>(0);
+  const [sendingAward, setSendingAward] = useState<boolean>(false);
+  const [awardSuccess, setAwardSuccess] = useState<boolean>(false);
   const cellRefs = useRef<(HTMLInputElement | null)[][]>([]);
 
   useEffect(() => {
@@ -168,9 +184,45 @@ export default function CrosswordGame() {
     cellRefs.current[nextRow][nextCol]?.focus();
   };
 
-  const checkAnswers = () => {
+  const checkAnswers = async () => {
     setShowErrors(true);
-    computeScore();
+    const finalScore = computeScore();
+    console.log('Calculated score:', finalScore);
+    console.log('Current score state:', score);
+    
+    // Send award if user is logged in
+    if (user) {
+      setSendingAward(true);
+      try {
+        console.log('Sending award with score:', finalScore);
+        const response = await fetch('/api/send-award', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: user.user_id,
+            score: finalScore
+          }),
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log('Award sent successfully');
+          setAwardSuccess(true);
+          // Show success message without auto logout
+        } else if (result.alreadySent) {
+          console.log('Award already sent previously');
+        } else {
+          console.error('Failed to send award:', result.message);
+        }
+      } catch (error) {
+        console.error('Error sending award:', error);
+      } finally {
+        setSendingAward(false);
+      }
+    }
   };
   const resetPuzzle = () => initializeGrid();
   const revealAnswer = () => {
@@ -209,7 +261,7 @@ export default function CrosswordGame() {
       }
       if (formed === answer) correctCount++
     }
-    const pts = correctCount * 2
+    const pts = correctCount * 10
     setScore(pts)
     return pts
   }
@@ -255,14 +307,21 @@ export default function CrosswordGame() {
             <div className="w-64 p-4 bg-gradient-to-b from-[#06121a] to-[#041018] rounded-md border border-gray-800 shadow-sm h-full">
               <h3 className="text-sm font-semibold mb-3" style={{ color: 'oklch(0.52 0.23 21.3)' }}>Босоо</h3>
               <div className="pt-1 h-full">
-                <div className="flex flex-col gap-2 h-full">
+                <div className="flex flex-col gap-4 h-full">
                   {down.map((c) => (
                     <button
                       key={c.number}
                       onClick={() => setOpenClue(c)}
-                      className={`w-12 h-12 rounded flex items-center justify-center border border-gray-700 text-sm font-medium ${selectedClue && selectedClue.number === c.number ? (theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200') : 'bg-transparent hover:bg-gray-900'}`}
+                      className={`w-full h-16 rounded flex items-center border border-gray-700 text-xs font-medium px-2 ${selectedClue && selectedClue.number === c.number ? (theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200') : 'bg-transparent hover:bg-gray-900'}`}
                     >
-                      {c.number}
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                          {c.number}
+                        </div>
+                        <span className="text-left">
+                          {c.text.split(' ').slice(0, 4).join(' ')}
+                        </span>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -326,7 +385,23 @@ export default function CrosswordGame() {
           </div>
 
             <div className="flex gap-2 justify-center mt-4">
-            <button onClick={checkAnswers} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded flex items-center gap-2"><Check className="w-4 h-4" />Шалгах</button>
+            <button 
+              onClick={checkAnswers} 
+              disabled={sendingAward}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded flex items-center gap-2"
+            >
+              {sendingAward ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Шалгаж байна...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  Шалгах
+                </>
+              )}
+            </button>
             {/* reveal and reset buttons removed per request */}
           </div>
   </div>
@@ -336,14 +411,21 @@ export default function CrosswordGame() {
             <div className="p-4 bg-gradient-to-b from-[#06121a] to-[#041018] rounded-md border border-gray-800 shadow-sm h-[calc(100vh-6rem)]">
               <h3 className="text-sm font-semibold mb-3" style={{ color: 'oklch(0.52 0.23 21.3)' }}>Хэвтээ</h3>
               <div className="pt-1 h-full">
-                <div className="flex flex-col gap-2 h-full">
+                <div className="flex flex-col gap-4 h-full">
                   {across.map((c) => (
                     <button
                       key={c.number}
                       onClick={() => setOpenClue(c)}
-                      className={`w-12 h-12 rounded flex items-center justify-center border border-gray-700 text-sm font-medium ${selectedClue && selectedClue.number === c.number ? (theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200') : 'bg-transparent hover:bg-gray-900'}`}
+                      className={`w-full h-16 rounded flex items-center border border-gray-700 text-xs font-medium px-2 ${selectedClue && selectedClue.number === c.number ? (theme === 'dark' ? 'bg-gray-800' : 'bg-gray-200') : 'bg-transparent hover:bg-gray-900'}`}
                     >
-                      {c.number}
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                          {c.number}
+                        </div>
+                        <span className="text-left">
+                          {c.text.split(' ').slice(0, 4).join(' ')}
+                        </span>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -373,9 +455,33 @@ export default function CrosswordGame() {
                     setOpenClue(null)
                   }}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
-                >Go</button>
-                <button onClick={() => setOpenClue(null)} className="px-4 py-2 bg-gray-700 text-white rounded">Close</button>
+                >Үргэлжлүүлэх</button>
+                <button onClick={() => setOpenClue(null)} className="px-4 py-4 bg-gray-700 text-white rounded">Хаах</button>
               </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Success Message Overlay */}
+        {awardSuccess && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="bg-green-900/90 border border-green-700 rounded-lg p-8 text-center max-w-md mx-4">
+              <div className="w-16 h-16 mx-auto mb-4 bg-green-600 rounded-full flex items-center justify-center">
+                <Check className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-green-300 mb-2">Амжилттай!</h3>
+              <p className="text-green-200 mb-4">
+                Таны оноо ({score} оноо) амжилттай илгээгдлээ.
+              </p>
+              <p className="text-sm text-green-300 mb-4">
+                Тоглолтыг үргэлжлүүлж болно.
+              </p>
+              <button
+                onClick={() => setAwardSuccess(false)}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm"
+              >
+                Хаах
+              </button>
             </div>
           </div>
         )}
