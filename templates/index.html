@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="mn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Crossword</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .cell { width:36px; height:36px; box-sizing:border-box; }
+    .cell-input { width:100%; height:100%; border:none; text-align:center; font-weight:700; font-size:18px; background:transparent; outline:none; }
+    .corner-number { position:absolute; top:2px; left:4px; font-size:10px; color:#4b5563; }
+    .black { background:#000; }
+    .selected { box-shadow: inset 0 0 0 2px rgba(59,130,246,0.12); }
+    .highlight { background: rgba(34,197,94,0.10); }
+    .correct { background: #bbf7d0 !important; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-start justify-center p-6">
+  <div class="max-w-6xl w-full grid md:grid-cols-3 gap-6">
+
+    <div class="md:col-span-2 bg-white p-4 rounded shadow">
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-bold">Үгийн сүлжээ</h1>
+        <div class="space-x-2">
+          <button id="revealBtn" class="px-3 py-1 bg-gray-200 rounded">Reveal</button>
+          <button id="checkBtn" class="px-3 py-1 bg-blue-600 text-white rounded">Check</button>
+          <button id="clearBtn" class="px-3 py-1 bg-red-100 text-red-700 rounded">Clear</button>
+        </div>
+      </div>
+
+      <div id="grid" class="mx-auto" style="display:grid; grid-template-columns: repeat({{ cols }}, 36px); gap:0;">
+        {% for row in grid %}
+          {% set r = loop.index0 %}
+          {% for cell in row %}
+            {% set c = loop.index0 %}
+            {% if cell %}
+              <div class="cell relative border border-gray-300 bg-white" data-r="{{r}}" data-c="{{c}}">
+                {% set key = (r ~ '-' ~ c) %}
+                {% if key in numbers %}
+                  <span class="corner-number">{{ numbers[key] }}</span>
+                {% endif %}
+                <input maxlength="1" class="cell-input" id="cell-{{r}}-{{c}}" data-r="{{r}}" data-c="{{c}}">
+              </div>
+            {% else %}
+              <div class="cell black"></div>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      </div>
+
+      <p class="text-sm text-gray-600 mt-3">Arrow keys to move, Space toggles across/down, words turn green when correct.</p>
+    </div>
+
+    <div class="bg-white p-4 rounded shadow overflow-auto">
+      <h2 class="text-lg font-semibold mb-2">Across</h2>
+      <div id="acrossClues" class="space-y-2 mb-4">
+        {% for w in words %}
+          {% if w.dir == 'across' %}
+            <div>
+              <button class="text-left w-full clueBtn" data-target="{{ w.number }}-{{ w.dir }}">
+                <strong>{{ w.number }}.</strong> {{ w.clue }}
+              </button>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <h2 class="text-lg font-semibold mb-2">Down</h2>
+      <div id="downClues" class="space-y-2">
+        {% for w in words %}
+          {% if w.dir == 'down' %}
+            <div>
+              <button class="text-left w-full clueBtn" data-target="{{ w.number }}-{{ w.dir }}">
+                <strong>{{ w.number }}.</strong> {{ w.clue }}
+              </button>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const ROWS = {{ rows }};
+    const COLS = {{ cols }};
+    const WORD_CELLS = {{ word_cells | tojson }};
+    const WORDS = {{ words | tojson }};
+
+    function buildGridArray(){
+      const g = [];
+      for (let r=0;r<ROWS;r++){
+        g[r] = [];
+        for (let c=0;c<COLS;c++){
+          const el = document.getElementById(`cell-${r}-${c}`);
+          g[r][c] = el ? (el.value || "") : "";
+        }
+      }
+      return g;
+    }
+
+    let focused = null;
+    let direction = 'across';
+
+    function setFocus(r,c){
+      focused = {r,c};
+      // remove selected/highlight from fillable cells
+      document.querySelectorAll('.cell[data-r]').forEach(d => d.classList.remove('selected','highlight'));
+      const cellDiv = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
+      if (cellDiv) cellDiv.classList.add('selected');
+      highlightCurrentWord();
+      const input = document.getElementById(`cell-${r}-${c}`);
+      if (input) input.focus();
+    }
+
+    function highlightCurrentWord(){
+      document.querySelectorAll('.cell[data-r]').forEach(d => d.classList.remove('highlight'));
+      if (!focused) return;
+      const r = focused.r, c = focused.c;
+      if (direction === 'across') {
+        let sc = c;
+        while (sc-1 >= 0 && document.getElementById(`cell-${r}-${sc-1}`)) sc--;
+        let ec = c;
+        while (ec+1 < COLS && document.getElementById(`cell-${r}-${ec+1}`)) ec++;
+        for (let cc=sc; cc<=ec; cc++){
+          const dd = document.querySelector(`.cell[data-r='${r}'][data-c='${cc}']`);
+          if (dd) dd.classList.add('highlight');
+        }
+      } else {
+        let sr = r;
+        while (sr-1 >= 0 && document.getElementById(`cell-${sr-1}-${c}`)) sr--;
+        let er = r;
+        while (er+1 < ROWS && document.getElementById(`cell-${er+1}-${c}`)) er++;
+        for (let rr=sr; rr<=er; rr++){
+          const dd = document.querySelector(`.cell[data-r='${rr}'][data-c='${c}']`);
+          if (dd) dd.classList.add('highlight');
+        }
+      }
+    }
+
+    // attach input listeners
+    document.querySelectorAll('.cell[data-r]').forEach(div => {
+      const r = parseInt(div.dataset.r);
+      const c = parseInt(div.dataset.c);
+      const input = document.getElementById(`cell-${r}-${c}`);
+      if (!input) return;
+      input.addEventListener('focus', () => setFocus(r,c));
+      input.addEventListener('input', (e) => {
+        e.target.value = e.target.value.toUpperCase().slice(-1);
+        // auto advance
+        if (direction === 'across') {
+          let nc = c+1;
+          while (nc < COLS && !document.getElementById(`cell-${r}-${nc}`)) nc++;
+          if (nc < COLS) {
+            const nxt = document.getElementById(`cell-${r}-${nc}`);
+            if (nxt){ nxt.focus(); setFocus(r,nc); }
+          }
+        } else {
+          let nr = r+1;
+          while (nr < ROWS && !document.getElementById(`cell-${nr}-${c}`)) nr++;
+          if (nr < ROWS) {
+            const nxt = document.getElementById(`cell-${nr}-${c}`);
+            if (nxt){ nxt.focus(); setFocus(nr,c); }
+          }
+        }
+      });
+
+      input.addEventListener('keydown', (e) => {
+        const key = e.key;
+        if (key === 'ArrowRight') {
+          e.preventDefault();
+          let nc = c+1;
+          while (nc < COLS && !document.getElementById(`cell-${r}-${nc}`)) nc++;
+          if (nc < COLS) setFocus(r,nc);
+        } else if (key === 'ArrowLeft') {
+          e.preventDefault();
+          let nc = c-1;
+          while (nc >=0 && !document.getElementById(`cell-${r}-${nc}`)) nc--;
+          if (nc >= 0) setFocus(r,nc);
+        } else if (key === 'ArrowDown') {
+          e.preventDefault();
+          let nr = r+1;
+          while (nr < ROWS && !document.getElementById(`cell-${nr}-${c}`)) nr++;
+          if (nr < ROWS) setFocus(nr,c);
+        } else if (key === 'ArrowUp') {
+          e.preventDefault();
+          let nr = r-1;
+          while (nr >= 0 && !document.getElementById(`cell-${nr}-${c}`)) nr--;
+          if (nr >= 0) setFocus(nr,c);
+        } else if (key === ' ') {
+          e.preventDefault();
+          direction = (direction === 'across') ? 'down' : 'across';
+          highlightCurrentWord();
+        } else if (key === 'Backspace') {
+          // clear and move back
+          e.preventDefault();
+          e.target.value = '';
+          if (direction === 'across') {
+            let nc = c-1;
+            while (nc >=0 && !document.getElementById(`cell-${r}-${nc}`)) nc--;
+            if (nc >= 0) {
+              const el = document.getElementById(`cell-${r}-${nc}`);
+              el.value = '';
+              el.focus();
+              setFocus(r,nc);
+            }
+          } else {
+            let nr = r-1;
+            while (nr >=0 && !document.getElementById(`cell-${nr}-${c}`)) nr--;
+            if (nr >= 0) {
+              const el = document.getElementById(`cell-${nr}-${c}`);
+              el.value = '';
+              el.focus();
+              setFocus(nr,c);
+            }
+          }
+        }
+      });
+    });
+
+    // clue buttons
+    document.querySelectorAll('.clueBtn').forEach(b => {
+      b.addEventListener('click', () => {
+        const target = b.dataset.target;
+        const cells = WORD_CELLS[target];
+        if (cells && cells.length) {
+          const r = cells[0][0], c = cells[0][1];
+          direction = target.endsWith('across') ? 'across' : 'down';
+          const el = document.getElementById(`cell-${r}-${c}`);
+          if (el) { el.focus(); setFocus(r,c); }
+        }
+      });
+    });
+
+    document.getElementById('checkBtn').addEventListener('click', async () => {
+      const grid = buildGridArray();
+      const res = await fetch('/check', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({grid})
+      });
+      const data = await res.json();
+      // clear previous
+      document.querySelectorAll('.cell[data-r]').forEach(d => d.classList.remove('correct'));
+      data.results.forEach(r => {
+        if (r.correct) {
+          const cells = WORD_CELLS[r.key];
+          cells.forEach(([rr,cc]) => {
+            const div = document.querySelector(`.cell[data-r='${rr}'][data-c='${cc}']`);
+            if (div) div.classList.add('correct');
+          });
+        }
+      });
+    });
+
+    document.getElementById('revealBtn').addEventListener('click', async () => {
+      const res = await fetch('/reveal');
+      const sol = await res.json();
+      for (const key in WORD_CELLS) {
+        const word = sol[key];
+        const cells = WORD_CELLS[key];
+        for (let i=0;i<cells.length;i++){
+          const [r,c] = cells[i];
+          const el = document.getElementById(`cell-${r}-${c}`);
+          if (el) el.value = word[i];
+          const div = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
+          if (div) div.classList.add('correct');
+        }
+      }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      document.querySelectorAll('.cell-input').forEach(inp => inp.value = '');
+      document.querySelectorAll('.cell[data-r]').forEach(d => d.classList.remove('correct'));
+    });
+
+    // initial focus
+    window.addEventListener('load', () => {
+      const first = document.querySelector('.cell-input');
+      if (first) {
+        first.focus();
+        setFocus(parseInt(first.dataset.r), parseInt(first.dataset.c));
+      }
+    });
+
+  </script>
+</body>
+</html>
