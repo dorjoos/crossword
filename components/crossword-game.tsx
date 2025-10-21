@@ -53,6 +53,7 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
   const [score, setScore] = useState<number>(0);
   const [sendingAward, setSendingAward] = useState<boolean>(false);
   const [awardSuccess, setAwardSuccess] = useState<boolean>(false);
+  const [awardAlreadySent, setAwardAlreadySent] = useState<boolean>(false);
   const cellRefs = useRef<(HTMLInputElement | null)[][]>([]);
 
   useEffect(() => {
@@ -211,6 +212,7 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
         if (result.success) {
           console.log('Award sent successfully');
           setAwardSuccess(true);
+          setAwardAlreadySent(false);
           // Auto logout after successful award submission
           setTimeout(() => {
             localStorage.removeItem('crosswordUser');
@@ -218,6 +220,13 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
           }, 3000); // Wait 3 seconds to show success message
         } else if (result.alreadySent) {
           console.log('Award already sent previously');
+          // Show notification and clear session
+          setAwardSuccess(true);
+          setAwardAlreadySent(true);
+          setTimeout(() => {
+            localStorage.removeItem('crosswordUser');
+            window.location.reload();
+          }, 3000); // Wait 3 seconds to show notification
         } else {
           console.error('Failed to send award:', result.message);
         }
@@ -473,9 +482,14 @@ export default function CrosswordGame({ user }: CrosswordGameProps) {
               <div className="w-16 h-16 mx-auto mb-4 bg-green-600 rounded-full flex items-center justify-center">
                 <Check className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-green-300 mb-2">Амжилттай!</h3>
+              <h3 className="text-xl font-bold text-green-300 mb-2">
+                {awardAlreadySent ? 'Аль хэдийн илгээгдсэн' : 'Амжилттай!'}
+              </h3>
               <p className="text-green-200 mb-4">
-                Таны оноо ({score} оноо) амжилттай илгээгдлээ.
+                {awardAlreadySent 
+                  ? 'Таны хариулт аль хэдийн илгээгдсэн байна.'
+                  : `Таны оноо (${score} оноо) амжилттай илгээгдлээ.`
+                }
               </p>
               <p className="text-sm text-green-300 mb-4">
                 Системээс автоматаар гарах болно...
